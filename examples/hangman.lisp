@@ -101,17 +101,6 @@
             Nil
             0)))))
 
-  (declare store-bad-guess (Char -> HangmanM Unit))
-  (define (store-bad-guess c)
-    (do
-     (st <- get)
-     (put (HangmanState
-           (Cons c (guessed-chars_ st))
-           1
-           ))))
-           ;; DEBUG - breaking it?
-           ;; (+ 1 (num-wrong-guesses_ st))))))
-
   (define-type Guess
     (WordGuess String)
     (LetterGuess Char)
