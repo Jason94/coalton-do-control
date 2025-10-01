@@ -6,6 +6,7 @@
    )
   (:local-nicknames
    (:ct #:do-control/core)
+   (:i #:simple-io/io)
    (:it #:simple-io/term)
    )
   (:import-from #:coalton-library/monad/environment
@@ -155,6 +156,8 @@
     (define get (lift get))
     (define put (compose lift put))
     (define modify (compose lift modify)))
+
+  (i:derive-monad-io (LoopT :m))
 
   (define-instance (it:MonadIoTerm :m => it:MonadIoTerm (LoopT :m))
     (define it:write (compose lift it:write))
