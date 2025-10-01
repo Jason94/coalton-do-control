@@ -91,4 +91,79 @@
       (modify (Cons x))
       (modify (Cons x))))
 
+  (declare demo-if* (Integer -> Boolean -> ST (List Integer) Unit))
+  (define (demo-if* x test?)
+    "Push `x` onto the state twice if `test?` is True, otherwise push 0
+onto the state twice.."
+    (if* test?
+         (do
+          (modify (Cons x))
+          (modify (Cons x)))
+         (do
+          (modify (Cons 0))
+          (modify (Cons 0)))))
+
+  (declare demo-do-if (Integer -> Boolean -> ST (List Integer) Unit))
+  (define (demo-do-if x test?)
+    "Push `x` onto the state twice if `test?` is True, otherwise push 0
+onto the state twice.."
+    (do-if test?
+         (do
+          (modify (Cons x))
+          (modify (Cons x)))
+      (modify (Cons 0))
+      (modify (Cons 0))))
+
+  (declare demo-if-val (ST (List Integer) (Result String Integer)))
+  (define demo-if-val
+    "Retrieve the head of the state, if non-empty, or an error message.
+Either way, reset the state to '(1 2 3)."
+    (do
+     (st <- get)
+     (if-val (head st)
+      (fn (x)
+        (do
+         (put (make-list 1 2 3))
+         (pure (Ok x))))
+      (do
+       (put (make-list 1 2 3))
+       (pure (Err "List was empty"))))))
+
+  (declare demo-do-if-val (ST (List Integer) (Result String Integer)))
+  (define demo-do-if-val
+    "Retrieve the head of the state, if non-empty, or an error message.
+Either way, reset the state to '(1 2 3)."
+    (do
+     (st <- get)
+     (do-if-val (x (head st))
+         (do
+          (put (make-list 1 2 3))
+          (pure (Ok x)))
+       (put (make-list 1 2 3))
+       (pure (Err "List was empty")))))
+
+  (declare demo-if-valM (ST (List Integer) (Result String Integer)))
+  (define demo-if-valM
+    "Retrieve the head of the state, if non-empty, or an error message.
+Either way, reset the state to '(1 2 3)."
+    (if-valM (map head get)
+        (fn (x)
+          (do
+           (put (make-list 1 2 3))
+           (pure (Ok x))))
+      (do
+       (put (make-list 1 2 3))
+       (pure (Err "List was empty")))))
+
+  (declare demo-do-if-valM (ST (List Integer) (Result String Integer)))
+  (define demo-do-if-valM
+    "Retrieve the head of the state, if non-empty, or an error message.
+Either way, reset the state to '(1 2 3)."
+    (do-if-valM (x (map head get))
+          (do
+           (put (make-list 1 2 3))
+           (pure (Ok x)))
+      (put (make-list 1 2 3))
+      (pure (Err "List was empty"))))
+
   )

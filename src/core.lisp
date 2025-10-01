@@ -19,7 +19,7 @@
    #:whenM
    #:when-val
    #:when-valM
-   #:if%
+   #:if*
    #:if-val
    #:if-val_
    #:if-valM
@@ -149,8 +149,8 @@
      (when-val val? f->m)))
 
   (inline)
-  (declare if% ((Monad :m) (Terminator :t) => :t -> :m :b -> :m :b -> :m :b))
-  (define (if% val? m-true m-false)
+  (declare if* ((Monad :m) (Terminator :t) => :t -> :m :b -> :m :b -> :m :b))
+  (define (if* val? m-true m-false)
     (if (ended? val?)
         m-true
         m-false))
@@ -265,7 +265,7 @@
        ,@body))))
 
 (cl:defmacro do-if (term true-body cl:&body none-body)
-  `(if% ,term
+  `(if* ,term
     ,true-body
     (do
      ,@none-body)))
