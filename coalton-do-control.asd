@@ -13,6 +13,7 @@
   :version     "0.1.0"
   :depends-on ("coalton" "named-readtables" "coalton-simple-io")
   :components ((:module "src"
+                :serial t
                 :components
                 ((:file "core")
                  (:file "loops")
@@ -44,7 +45,8 @@
   :depends-on ("coalton-do-control")
   :components ((:module "examples"
                 :components
-                ((:file "hangman"))))
+                ((:file "core")
+                 (:file "hangman"))))
   :description ""
   :long-description ""
   :in-order-to ((test-op (test-op "coalton-do-control/tests"))))
