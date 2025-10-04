@@ -6,6 +6,7 @@
    )
   (:local-nicknames
    (:l #:coalton-library/list)
+   (:it #:coalton-library/iterator)
    )
   (:import-from #:do-control/core
    #:Terminator
@@ -51,19 +52,15 @@
          ((None)
           (pure (reverse result)))))))
 
-  (inline)
-  (declare foreach (Monad :m => List :a -> (:a -> :m :z) -> :m Unit))
-  (define (foreach lst fa->m)
-    (match lst
-      ((Nil) (pure Unit))
-      ((Cons h rem)
-       (do
-        (fold
-         (fn (mz a)
-           (>>= mz (const (fa->m a))))
-         (fa->m h)
-         rem)
-        (pure Unit)))))
+  (declare foreach ((Monad :m) (it:IntoIterator :i :a) => :i -> (:a -> :m :z) -> :m Unit))
+  (define (foreach into-itr fa->m)
+    (rec % ((itr (it:into-iter into-itr)))
+      (match (it:next! itr)
+        ((None) (pure Unit))
+        ((Some a)
+         (do
+          (fa->m a)
+          (% itr))))))
   )
 
 ;;
