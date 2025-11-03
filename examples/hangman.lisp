@@ -66,6 +66,10 @@
     (guessed-chars (List Char))
     (num-wrong-guesses UFix))
 
+  (declare inc-wrong-guesses (HangmanState -> HangmanState))
+  (define (inc-wrong-guesses st)
+    (HangmanState (.guessed-chars st) (+ 1 (.num-wrong-guesses st))))
+
   (define-type-alias HangmanM (EnvT HangmanConf (StateT HangmanState i:IO)))
 
   ;; Workaround for:
@@ -123,13 +127,13 @@
   ;; (declare enter-letter-guess (String -> Char -> HangmanM Unit))
   (define (enter-letter-guess secret-word c)
     "Store the guessed letter and increment the number of wrong guesses."
-    (do
-     (st <- get)
-     (put (HangmanState
-           (Cons c (guessed-chars_ st))
-           (if (str-contains? c secret-word)
-               (num-wrong-guesses_ st)
-               (+ 1 (num-wrong-guesses_ st)))))))
+    (modify
+     (fn (st)
+       (HangmanState
+        (Cons c (guessed-chars_ st))
+        (if (str-contains? c secret-word)
+            (num-wrong-guesses_ st)
+            (+ 1 (num-wrong-guesses_ st)))))))
 
   ;; (declare write-status (String -> HangmanM Unit))
   (define (write-status secret-word)
@@ -178,15 +182,11 @@
          ((LetterGuess c)
           (enter-letter-guess secret-word c))
          ((WordGuess w)
-          (do-if (== w secret-word)
-              (do
-               (i:write-line (<> "The word was " secret-word))
-               (i:write-line "You won!")
-               lp:break-loop)
-            (st <- get)
-            (put (HangmanState
-                  (guessed-chars_ st)
-                  (+ 1 (num-wrong-guesses_ st)))))))
+          (do-if (/= w secret-word)
+              (modify inc-wrong-guesses)
+            (i:write-line (<> "The word was " secret-word))
+            (i:write-line "You won!")
+            lp:break-loop)))
        (do-whenM over-and-failed?
          (i:write-line failure-msg)
          lp:break-loop)
