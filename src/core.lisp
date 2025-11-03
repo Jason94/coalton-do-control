@@ -353,7 +353,7 @@
      (_ ,@rest-body)))
 
 (cl:defmacro matchM (m cl:&body body)
-  (cl:let ((sym (cl:gensym)))
+  (cl:let ((sym (cl:gensym "match-scrut")))
     `(do
       (,sym <- ,m)
       (match ,sym

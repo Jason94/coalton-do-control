@@ -68,6 +68,8 @@
 
   (define-type-alias HangmanM (EnvT HangmanConf (StateT HangmanState i:IO)))
 
+  ;; Workaround for:
+  ;; https://github.com/coalton-lang/coalton/issues/1656
   (declare get-random-word_ (HangmanConf -> HangmanM String))
   (define (get-random-word_ conf)
     (lift (lift (.get-random-word conf))))
@@ -150,7 +152,9 @@
      (i:write-line (<> (<> "You have " (into remaining-guesses)) " remaining incorrect guesses."))
      (i:write-line "")))
 
-  (declare over-and-failed? (HangmanM Boolean))
+  (declare over-and-failed? ((MonadState HangmanState :m)
+                             (MonadEnvironment HangmanConf :m)
+                             => :m Boolean))
   (define over-and-failed?
     (do
      ((HangmanState _ n-wrong) <- get)
@@ -172,11 +176,7 @@
          ((InputError msg)
           (i:write-line (<> "Invalid guess: " msg)))
          ((LetterGuess c)
-          (do
-           (enter-letter-guess secret-word c)
-           (do-whenM (lift over-and-failed?)
-             (i:write-line failure-msg)
-             lp:break-loop)))
+          (enter-letter-guess secret-word c))
          ((WordGuess w)
           (do-if (== w secret-word)
               (do
@@ -186,12 +186,12 @@
             (st <- get)
             (put (HangmanState
                   (guessed-chars_ st)
-                  (+ 1 (num-wrong-guesses_ st))))
-            (do-whenM (lift over-and-failed?)
-              (i:write-line failure-msg)
-              lp:break-loop))))
-       (write-status secret-word)
-       )))
+                  (+ 1 (num-wrong-guesses_ st)))))))
+       (do-whenM over-and-failed?
+         (i:write-line failure-msg)
+         lp:break-loop)
+       (write-status secret-word))
+      ))
   )
 
 
