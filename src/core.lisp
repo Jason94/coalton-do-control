@@ -41,7 +41,9 @@
    #:do-flatmap-success
    #:do-flatmap-successM
 
+   #:do-match
    #:matchM
+   #:do-matchM
    #:do-when-match
    #:do-if-match
    )
@@ -357,4 +359,43 @@
     `(do
       (,sym <- ,m)
       (match ,sym
+        ,@body))))
+
+(cl:defmacro do-match (scrutinee cl:&rest forms)
+  "Converts:
+
+(do-match x
+  ((A a1 a2)
+   (func1 a1)
+   (func2 a2))
+  ((B b1 b2)
+   (func1 b1)
+   (func2 b2)))
+
+=>
+
+(match x
+  ((A a1 a2)
+   (do
+     (func1 a1)
+     (func2 a2)))
+  ((B b1 b2)
+   (do
+     (func1 b1)
+     (func2 b2))))
+"
+  `(match ,scrutinee
+     ,@(cl:mapcar
+        (cl:lambda (form)
+          (cl:destructuring-bind (pattern-form cl:&rest do-body) form
+            `(,pattern-form
+              (do
+               ,@do-body))))
+        forms)))
+
+(cl:defmacro do-matchM (scrutineeM cl:&body body)
+  (cl:let ((sym (cl:gensym "match-scrut")))
+    `(do
+      (,sym <- ,scrutineeM)
+      (do-match ,sym
         ,@body))))
