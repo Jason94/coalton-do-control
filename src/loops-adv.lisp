@@ -21,6 +21,11 @@
    #:modify)
   (:export
    ;;
+   ;; LoopT
+   ;;
+   #:LoopT
+
+   ;;
    ;; Loop Commands
    ;;
    #:unwrap-loop
@@ -156,8 +161,6 @@
     (define get (lift get))
     (define put (compose lift put))
     (define modify (compose lift modify)))
-
-  (i:derive-monad-io (LoopT :m))
 
   (define-instance (it:MonadIoTerm :m => it:MonadIoTerm (LoopT :m))
     (define it:write (compose lift it:write))

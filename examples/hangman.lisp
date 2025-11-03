@@ -10,8 +10,7 @@
    #:do-control/loops)
   (:local-nicknames
    (:lp #:do-control/loops-adv)
-   (:i #:simple-io/io)
-   (:it #:simple-io/term)
+   (:i #:do-control/examples/io)
    (:itr #:coalton-library/iterator)
    (:l #:coalton-library/list)
    (:tp #:coalton-library/tuple)
@@ -134,22 +133,22 @@
   (define (write-status secret-word)
     (do
      ((HangmanState guessed n-wrong) <- get)
-     (it:write-line "You have now guessed:")
-     (i:do-foreach-io (c guessed)
-       (it:write (<> (into c) " ")))
-     (it:write-line "")
-     (it:write-line "Secret Word:")
-     (i:do-foreach-io (c (chars-list secret-word))
-       (it:write
+     (i:write-line "You have now guessed:")
+     (do-foreach (c guessed)
+       (i:write (<> (into c) " ")))
+     (i:write-line "")
+     (i:write-line "Secret Word:")
+     (do-foreach (c (chars-list secret-word))
+       (i:write
         (<> (if (contains? c guessed)
                 (into c)
                 "_")
             " ")))
-     (it:write-line "")
+     (i:write-line "")
      (num-guesses <- (asks num-guesses_))
      (let remaining-guesses = (- num-guesses n-wrong))
-     (it:write-line (<> (<> "You have " (into remaining-guesses)) " remaining incorrect guesses."))
-     (it:write-line "")))
+     (i:write-line (<> (<> "You have " (into remaining-guesses)) " remaining incorrect guesses."))
+     (i:write-line "")))
 
   (declare over-and-failed? (HangmanM Boolean))
   (define over-and-failed?
@@ -165,31 +164,31 @@
     (do
      (get-random-word <- (asks get-random-word_))
      (secret-word <- get-random-word)
-     (it:write-line "Please enter a full word to make a guess at the answer.")
-     (it:write-line "Otherwise, enter a single letter to make a letter guess.")
+     (i:write-line "Please enter a full word to make a guess at the answer.")
+     (i:write-line "Otherwise, enter a single letter to make a letter guess.")
      (lp:do-loop
-       (input <- it:read-line)
+       (input <- i:read-line)
        (matchM (parse-guess input)
          ((InputError msg)
-          (it:write-line (<> "Invalid guess: " msg)))
+          (i:write-line (<> "Invalid guess: " msg)))
          ((LetterGuess c)
           (do
            (enter-letter-guess secret-word c)
            (do-whenM (lift over-and-failed?)
-             (it:write-line failure-msg)
+             (i:write-line failure-msg)
              lp:break-loop)))
          ((WordGuess w)
           (do-if (== w secret-word)
               (do
-               (it:write-line (<> "The word was " secret-word))
-               (it:write-line "You won!")
+               (i:write-line (<> "The word was " secret-word))
+               (i:write-line "You won!")
                lp:break-loop)
             (st <- get)
             (put (HangmanState
                   (guessed-chars_ st)
                   (+ 1 (num-wrong-guesses_ st))))
             (do-whenM (lift over-and-failed?)
-              (it:write-line failure-msg)
+              (i:write-line failure-msg)
               lp:break-loop))))
        (write-status secret-word)
        )))
@@ -197,4 +196,4 @@
 
 
 (cl:defun play ()
-  (coalton (run-hangman (HangmanConf 4 (i:wrap-io "pizza")) hangman)))
+  (coalton (run-hangman (HangmanConf 4 (pure "pizza")) hangman)))

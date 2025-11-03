@@ -11,7 +11,7 @@
   :mailto "Jason0@pm.me"
   :license     "MIT"
   :version     "0.1.0"
-  :depends-on ("coalton" "named-readtables" "coalton-simple-io")
+  :depends-on ("coalton" "named-readtables")
   :components ((:module "src"
                 :serial t
                 :components
@@ -46,6 +46,7 @@
   :components ((:module "examples"
                 :components
                 ((:file "core")
+                 (:file "io")
                  (:file "hangman"))))
   :description ""
   :long-description ""
