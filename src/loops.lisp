@@ -18,10 +18,12 @@
    ;; Looping Control Flow
    ;;
    #:loop-while
+   #:loop-times
    #:collect-val
    #:foreach
 
    #:do-loop-while
+   #:do-loop-times
    #:do-collect-val
    #:do-foreach
    )
@@ -40,6 +42,17 @@
      (if (ended? res)
          (pure Unit)
          (loop-while m-operation))))
+
+  (declare loop-times (Monad :m => UFix -> (UFix -> :m :a) -> :m Unit))
+  (define (loop-times n m-operation)
+    "Repeat M-OPERATION N times. Passes the current index (starting at 0) to
+M-OPERATION. Returns Unit."
+    (rec % ((i 0))
+      (if (== i n)
+          (pure Unit)
+          (do
+           (m-operation i)
+           (% (+ 1 i))))))
 
   (inline)
   (declare collect-val ((Monad :m) (Yielder :y) => :m (:y :a) -> :m (List :a)))
@@ -77,6 +90,14 @@ Discards the return values and returns Unit."
   `(loop-while
     (do
      ,@body)))
+
+(cl:defmacro do-loop-times ((sym n) cl:&body body)
+    "Run BODY (in a 'do' block) N times. Binds the current index (starting at 0) to SYM.
+Returns Unit."
+  `(loop-times ,n
+    (fn (,sym)
+      (do
+       ,@body))))
 
 (cl:defmacro do-collect-val (cl:&body body)
   "Run BODY repeatedly (in a 'do' block) collecting each yielded value into a list."

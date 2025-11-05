@@ -42,6 +42,9 @@
    #:loop-do-while
    #:do-loop-do-while
 
+   #:loop-times
+   #:do-loop-times
+
    #:collect
    #:do-collect
 
@@ -208,6 +211,20 @@ Respects break and continue within BODY. Returns Unit."
             ((Break%) (pure Unit))
             (_ (loop-do-while m-term? body)))))))
 
+  (declare loop-times (Monad :m => UFix -> (UFix -> LoopT :m :a) -> :m Unit))
+  (define (loop-times n body)
+    "Repeat BODY N times. Passes the current index (starting at 0) to BODY.
+Returns Unit."
+    (rec % ((i 0))
+      (if (== i n)
+          (pure Unit)
+          (do
+           (step <- (unwrap-loop (body i)))
+           (match step
+             ((Break%) (pure Unit))
+             ((Continue%) (% (+ 1 i)))
+             ((Value% _) (% (+ 1 i))))))))
+
   (declare collect (Monad :m => LoopT :m :a -> :m (List :a)))
   (define (collect body)
     "Run BODY in a loop, collecting each value it produces into a list in encounter order.
@@ -283,6 +300,14 @@ Returns Unit."
   `(loop-do-while ,test
     (do
      ,@body)))
+
+(cl:defmacro do-loop-times ((sym n) cl:&body body)
+    "Run BODY (in a 'do' block) N times. Binds the current index (starting at 0) to SYM.
+Respects break and continue in BODY. Returns Unit."
+  `(loop-times ,n
+    (fn (,sym)
+      (do
+       ,@body))))
 
 (cl:defmacro do-collect (cl:&body body)
   "Run BODY in a loop and collect each produced value into a list."
