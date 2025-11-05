@@ -77,15 +77,21 @@
   (inline)
   (declare unwrap-loop (LoopT :m :a -> :m (Step :a)))
   (define (unwrap-loop (LoopT m-stp))
+    "Advance a LoopT computation by one step, returning whether it asked to continue,
+break, or produced a value."
     m-stp)
 
   (inline)
   (declare break-loop (Monad :m => LoopT :m :a))
-  (define break-loop (LoopT (pure Break%)))
+  (define break-loop
+    "Signal that the loop should terminate immediately."
+    (LoopT (pure Break%)))
 
   (inline)
   (declare continue-loop (Monad :m => LoopT :m :a))
-  (define continue-loop (LoopT (pure Continue%)))
+  (define continue-loop
+    "Signal that the current iteration should be skipped and the loop should continue."
+    (LoopT (pure Continue%)))
 
   (define-instance (Functor :m => Functor (LoopT :m))
     (inline)
@@ -168,6 +174,7 @@
 (coalton-toplevel
   (declare loop_ (Monad :m => LoopT :m :a -> :m Unit))
   (define (loop_ body)
+    "Run BODY forever, until it signals a break. Any produced values are ignored. Returns Unit."
     (do
      (r <- (unwrap-loop body))
      (match r
@@ -176,6 +183,7 @@
 
   (declare loop-while ((Monad :m) (ct::Terminator :t) => LoopT :m :t -> :m Unit))
   (define (loop-while body)
+    "Run BODY repeatedly until it returns a terminated value. Returns Unit."
     (do
      (r <- (unwrap-loop body))
      (match r
@@ -188,6 +196,8 @@
 
   (declare loop-do-while ((Monad :m) (ct::Terminator :t) => :m :t -> LoopT :m :a -> :m Unit))
   (define (loop-do-while m-term? body)
+    "Before each iteration, evaluate M-TERM?. If it indicates completion, stop; otherwise run BODY.
+Respects break and continue within BODY. Returns Unit."
     (do
      (term? <- m-term?)
      (if (ct::ended? term?)
@@ -200,6 +210,8 @@
 
   (declare collect (Monad :m => LoopT :m :a -> :m (List :a)))
   (define (collect body)
+    "Run BODY in a loop, collecting each value it produces into a list in encounter order.
+Stops when BODY breaks. Continues skip the rest of the iteration. Returns the collected list."
     (rec % ((result mempty))
       (do
        (r <- (unwrap-loop body))
@@ -211,6 +223,9 @@
 
   (declare collect-val ((Monad :m) (ct::Yielder :y) => LoopT :m (:y :a) -> :m (List :a)))
   (define (collect-val body)
+    "Run BODY in a loop, adding each available value it yields to a list.
+Stops when BODY yields no value or breaks. Continue skips the rest of the iteration.
+Returns the collected list."
     (rec % ((result mempty))
       (do
        (r <- (unwrap-loop body))
@@ -226,6 +241,8 @@
 
   (declare foreach (Monad :m => List :a -> (:a -> LoopT :m :z) -> :m Unit))
   (define (foreach lst fa->lpt-m)
+    "For each element of LST, run FA->LPT-M on it. Break stops the iteration.
+Continue skips to the next element. Discards return values and returns Unit."
     (rec % ((rem lst))
       (match rem
         ((Nil) (pure Unit))
@@ -239,42 +256,60 @@
   (inline)
   (declare once (Monad :m => LoopT :m :a -> :m Unit))
   (define (once lp-m)
+    "Run an operation exactly once. Continue or break will both immediately end
+execution in the operation. Returns Unit."
     (do
      (unwrap-loop lp-m)
      (pure Unit))))
 
 (cl:defmacro do-loop (cl:&body body)
+  "Run BODY (in a 'do' block) forever until it signals a break. Any produced
+values are ignored. Returns Unit."
   `(loop_
     (do
      ,@body)))
 
 (cl:defmacro do-loop-while (cl:&body body)
+  "Run BODY (in a 'do' block) repeatedly until it returns a terminated value.
+Returns Unit."
   `(loop-while
     (do
      ,@body)))
 
 (cl:defmacro do-loop-do-while (test cl:&body body)
+  "Before each iteration, evaluate TEST. If it indicates completion, stop.
+Otherwise run BODY (in a 'do' block). Respects break and continue within BODY.
+Returns Unit."
   `(loop-do-while ,test
     (do
      ,@body)))
 
 (cl:defmacro do-collect (cl:&body body)
+  "Run BODY in a loop and collect each produced value into a list."
   `(collect
      (do
        ,@body)))
 
 (cl:defmacro do-collect-val (cl:&body body)
+    "Run BODY (in a 'do' block) in a loop, adding each available value it
+yields to a list. Stops when BODY yields no value or breaks. Continus
+skips the rest of the iteration. Returns the collected list."
   `(collect-val
     (do
      ,@body)))
 
 (cl:defmacro do-foreach ((sym lst) cl:&body body)
+  "For each element of LST, bind it to SYM and run BODY (in a 'do' block) on it.
+Break stops the iteration. Continue skips to the next element. Discards return
+values and returns Unit."
   `(foreach ,lst
     (fn (,sym)
       (do
        ,@body))))
 
 (cl:defmacro do-once (cl:&body body)
+    "Run BODY (in a 'do' block) exactly once. Continue or break will both
+immediately end execution in the operation. Returns Unit."
   `(once
     (do
      ,@body)))

@@ -34,6 +34,7 @@
    #:do-when-valM
    #:do-if
    #:do-if-val
+   #:do-if-not-val
    #:do-if-val_
    #:do-if-valM
    #:do-map-success
@@ -130,8 +131,7 @@ or do nothing."
   (inline)
   (declare whenM ((Monad :m) (Terminator :t) => :m :t -> :m :z -> :m Unit))
   (define (whenM mterm? mop)
-    "Monadic variant of when_. Evaluate MTERM?, and if it indicates completion, run MOP,
-or do nothing."
+    "Evaluate MTERM?, and if it indicates completion, run MOP, or do nothing."
     (do
      (term? <- mterm?)
      (when_ term? mop)))
@@ -151,8 +151,7 @@ or do nothing."
   (inline)
   (declare when-valM ((Monad :m) (Yielder :y) => :m (:y :a) -> (:a -> :m :z) -> :m Unit))
   (define (when-valM mval? f->m)
-    "Monadic variant of when-val. Evaluate MVAL?, and if it yields, run F->M on the value.
-Otherwise, do nothing."
+    "Evaluate MVAL?, and if it yields, run F->M on the value. Otherwise, do nothing."
     (do
      (val? <- mval?)
      (when-val val? f->m)))
@@ -189,7 +188,8 @@ else run M-FALSE."
   (inline)
   (declare if-valM ((Monad :m) (Yielder :y) => :m (:y :a) -> (:a -> :m :b) -> :m :b -> :m :b))
   (define (if-valM mval? f-mval m-none)
-    "Monadic variant of if-val. Evaluate MVAL? and dispatch to F-MVAL or M-NONE."
+    "Evaluate MVAL? and dispatch to F-MVAL if the result yields a value.
+Otherwise evaluate M-NONE."
     (do
      (val? <- mval?)
      (if-val val? f-mval m-none)))
@@ -203,7 +203,7 @@ else run M-FALSE."
   (inline)
   (declare map-successM ((Monad :m) (Yielder :y) => :m (:y :a) -> (:a -> :m :b) -> :m (:y :b)))
   (define (map-successM mval? f->mb)
-    "Monadic variant of map-success. Evaluate MVAL? and map F->MB over the successful value(s)."
+    "Evaluate MVAL? and map F->MB over the successful value(s) from inside the monad."
     (do
      (val? <- mval?)
      (map-success val? f->mb)))
@@ -215,7 +215,8 @@ else run M-FALSE."
   (inline)
   (declare flatmap-successM ((Monad :m) (Yielder :y) => :m (:y :a) -> (:a -> :m (:y :b)) -> :m (:y :b)))
   (define (flatmap-successM mval? f->mval?b)
-    "Monadic variant of flatmap-success. Evaluate MVAL? and then concatenate-map using F->MVAL?B."
+    "Evaluate MVAL?, and if the result yields a value, then flatmap F->MVAL?B
+over the value."
     (do
      (val? <- mval?)
      (flatmap-success val? f->mval?b)))
@@ -282,26 +283,37 @@ else run M-FALSE."
        ,@body))))
 
 (cl:defmacro do-when-valM ((sym opt) cl:&body body)
-  "Monadic variant of do-when-val. Evaluate OPT, bind the yielded value to SYM, and run BODY."
+  "Evaluate OPT, bind the yielded value to SYM, and run BODY in a 'do' block."
   `(when-valM ,opt
     (fn (,sym)
       (do
        ,@body))))
 
 (cl:defmacro do-if (term true-body cl:&body none-body)
-  "If TERM indicates completion, expand to TRUE-BODY. Otherwise run NONE-BODY in a 'do' block."
+  "If TERM indicates completion, expand to TRUE-BODY. Otherwise run NONE-BODY
+in a 'do' block."
   `(if* ,term
     ,true-body
     (do
      ,@none-body)))
 
 (cl:defmacro do-if-val ((sym opt) some-body cl:&body none-body)
-  "If OPT yields a value, bind it to SYM and expand to SOME-BODY. Otherwise run NONE-BODY in a 'do' block."
+  "If OPT yields a value, bind it to SYM and expand to SOME-BODY. Otherwise run
+NONE-BODY in a 'do' block."
   `(if-val ,opt
     (fn (,sym)
       ,some-body)
     (do
      ,@none-body)))
+
+(cl:defmacro do-if-not-val ((sym opt) none-body cl:&body some-body)
+  "If OPT yields a value, bind it to SYM and expand to SOME-BODY in a 'do' block.
+Otherwise, run NONE-BODY."
+  `(if-val ,opt
+     (fn (,sym)
+       (do
+        ,@some-body))
+     ,none-body))
 
 (cl:defmacro do-if-val_ ((sym opt) some-body cl:&body none-body)
   "If OPT yields a value, bind it to SYM and expand to SOME-BODY. Otherwise run NONE-BODY in a 'do' block.
@@ -313,7 +325,7 @@ Returns Unit."
      ,@none-body)))
 
 (cl:defmacro do-if-valM ((sym opt) some-body cl:&body none-body)
-  "Monadic variant of do-if-val. Evaluate OPT, then choose between SOME-BODY and NONE-BODY. Wraps NONE-BODY
+  "Evaluate OPT, then choose between SOME-BODY and NONE-BODY. Wraps NONE-BODY
 in a 'do' block."
   `(if-valM ,opt
     (fn (,sym)
@@ -330,7 +342,8 @@ in a 'do' block."
         ,@body))))
 
 (cl:defmacro do-map-successM ((sym val?) cl:&body body)
-  "Monadic variant of do-map-success. Evaluate VAL? and apply BODY to its successful value(s)."
+  "Evaluate VAL?. If the value(s) are successful, run BODY wrapped in a 'do' block
+with the successful value(s) bound to SYM."
   `(map-successM
      ,val?
      (fn (,sym)
@@ -346,7 +359,8 @@ in a 'do' block."
        ,@body))))
 
 (cl:defmacro do-flatmap-successM ((sym val?) cl:&body body)
-  "Monadic variant of do-flatmap-success."
+  "Evaluate MVAL?, and if the result yields a value, then flatmap over BODY,
+wrapped in a 'do' block, with the yielded value bound to SYM."
   `(flatmap-successM
     ,val?
     (fn (,sym)
@@ -356,12 +370,6 @@ in a 'do' block."
 ;;
 ;; Loops
 ;;
-
-(cl:defmacro do-loop-while (cl:&body body)
-  "Run BODY repeatedly (in a 'do' block) until it returns a terminator that has ended."
-  `(loop-while
-    (do
-     ,@body)))
 
 (cl:defmacro do-collect-val (cl:&body body)
   "Run BODY repeatedly (in a 'do' block) collecting each yielded value into a list."
