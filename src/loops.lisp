@@ -36,7 +36,7 @@
 (coalton-toplevel
   (declare loop-while ((Monad :m) (Terminator :t) => :m :t -> :m Unit))
   (define (loop-while m-operation)
-    "Repeat M-OPERATION until it returns a terminated value. Retuturns Unit."
+    "Repeat M-OPERATION until it returns a terminated value. Returns Unit."
     (do
      (res <- m-operation)
      (if (ended? res)
